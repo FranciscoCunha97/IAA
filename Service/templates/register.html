@@ -21,7 +21,7 @@
         <div class="container-fluid">
           <a class="navbar-brand mb-0 h1" href="/">Services</a>
           <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="nav nav-pills">
+            <ul class="nav nav-pills me-auto mb-2 mb-lg-0">
               <li class="nav-item">
                 <a class="nav-link" aria-current="page" href="/">Home</a>
               </li>
@@ -29,21 +29,40 @@
                 <a class="nav-link" href="/bank-page">Bank Page</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="/medical-page">Medical Page</a>
+                <a class="nav-link" href="/medical-page">Medical Page</a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="/elearning-page">e-Learning</a>
               </li>
             </ul>
+            <a href="/register" class="btn btn-outline-light">Register</a>
           </div>
         </div>
-      </nav>
+    </nav>
 
       <div class="container d-flex justify-content-center mt-5">
         <div class="col-md-6">
           <div class="card custom-card">
-            <div class="card-body text-center">
-              <a href="{{ url_for('medical_login') }}" class="btn btn-primary">Login - IDP</a>
+            <div class="card-body">
+              <form>
+                <center><h4>Register - IdP</h4></center>
+                <div class="mb-3">
+                  <label for="inputName" class="form-label">Name</label>
+                  <input type="text" class="form-control" id="inputName" required>
+                </div>
+                <div class="mb-3">
+                  <label for="inputEmail" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="inputEmail" required>
+                </div>
+                <div class="mb-3">
+                  <label for="inputPassword" class="form-label">Password</label>
+                  <input type="password" class="form-control" id="inputPassword" required>
+                </div>
+                <div class="d-flex justify-content-center">
+                  <button type="submit" class="btn btn-primary me-2">Register</button>
+                  <button type="reset" class="btn btn-secondary">Clean</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

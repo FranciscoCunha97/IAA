@@ -29,7 +29,7 @@
                 <a class="nav-link" href="/bank-page">Bank Page</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="/medical-page">Medical Page</a>
+                <a class="nav-link" href="/medical-page">Medical Page</a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="/elearning-page">e-Learning</a>
@@ -42,8 +42,25 @@
       <div class="container d-flex justify-content-center mt-5">
         <div class="col-md-6">
           <div class="card custom-card">
-            <div class="card-body text-center">
-              <a href="{{ url_for('medical_login') }}" class="btn btn-primary">Login - IDP</a>
+            <div class="card-body">
+              <form>
+                <center><h4>Login - IdP</h4></center>
+                <div class="mb-3">
+                  <label for="exampleInputEmail1" class="form-label">Email address</label>
+                  <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                </div>
+                <div class="mb-3">
+                  <label for="exampleInputPassword1" class="form-label">Password</label>
+                  <input type="password" class="form-control" id="exampleInputPassword1">
+                </div>
+                <div class="mb-3 form-check">
+                  <input type="checkbox" class="form-check-input" id="exampleCheck1">
+                  <label class="form-check-label" for="exampleCheck1">Check me out</label>
+                </div>
+                <div class="d-flex justify-content-center">
+                  <button type="submit" class="btn btn-primary me-2">Login</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

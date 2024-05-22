@@ -18,9 +18,26 @@ def medical():
 def elearning():
     return render_template('elearning.html')
 
+@app.route('/bank-page/login')
+def bank_login():
+    return render_template('login.html')
+
+@app.route('/medical-page/login')
+def medical_login():
+    return render_template('login.html')
+
 @app.route('/elearning-page/login')
 def elearning_login():
-    return render_template('elearning-login.html')
+    return render_template('login.html')
+
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
+# def encrypt_password(pwd):
+#     new_pwd = 0
+
+#     return new_pwd
 
 if __name__ == '__main__':
     app.run(debug=True)
