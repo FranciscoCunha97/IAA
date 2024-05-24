@@ -1,9 +1,7 @@
 # models.py
 
 from flask_sqlalchemy import SQLAlchemy
-from authlib.integrations.sqla_oauth2 import (
-    OAuth2ClientMixin, OAuth2TokenMixin, OAuth2AuthorizationCodeMixin
-)
+from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin, OAuth2TokenMixin, OAuth2AuthorizationCodeMixin
 
 db = SQLAlchemy()
 
@@ -27,4 +25,3 @@ class OAuth2Token(db.Model, OAuth2TokenMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
     user = db.relationship('User')
-

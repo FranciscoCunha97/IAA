@@ -4,6 +4,27 @@ from authlib.integrations.flask_oauth2 import AuthorizationServer
 from authlib.oauth2.rfc6749 import grants
 from models import db, User, OAuth2Client, OAuth2Token, OAuth2AuthorizationCode
 
+def query_client(client_id):
+    return OAuth2Client.query.filter_by(client_id=client_id).first()
+
+def save_token(token, request):
+    if request.user:
+        user_id = request.user.id
+    else:
+        user_id = None
+    item = OAuth2Token(
+        client_id=request.client.client_id,
+        user_id=user_id,
+        **token
+    )
+    db.session.add(item)
+    db.session.commit()
+
+authorization = AuthorizationServer(
+    query_client=query_client,
+    save_token=save_token,
+)
+
 class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
     def save_authorization_code(self, code, request):
         auth_code = OAuth2AuthorizationCode(
@@ -41,25 +62,5 @@ class RefreshTokenGrant(grants.RefreshTokenGrant):
         db.session.delete(credential)
         db.session.commit()
 
-def query_client(client_id):
-    return OAuth2Client.query.filter_by(client_id=client_id).first()
-
-def save_token(token, request):
-    if request.user:
-        user_id = request.user.id
-    else:
-        user_id = None
-    item = OAuth2Token(
-        client_id=request.client.client_id,
-        user_id=user_id,
-        **token
-    )
-    db.session.add(item)
-    db.session.commit()
-
-authorization = AuthorizationServer(
-    query_client=query_client,
-    save_token=save_token,
-)
 authorization.register_grant(AuthorizationCodeGrant)
 authorization.register_grant(RefreshTokenGrant)

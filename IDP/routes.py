@@ -1,9 +1,10 @@
 # routes.py
 
-from flask import Blueprint, request, jsonify, redirect, render_template, url_for, session
+from flask import Blueprint, request, jsonify, redirect, render_template, url_for, session, current_app
 from werkzeug.security import check_password_hash
 from models import db, User, OAuth2Client
 from oauth import authorization
+from utils import generate_token, send_sms, store_token, validate_mobile_token, validate_card_pin
 
 bp = Blueprint('main', __name__)
 
@@ -14,7 +15,6 @@ def issue_token():
 @bp.route('/oauth/authorize', methods=['GET', 'POST'])
 def authorize():
     if request.method == 'GET':
-        # Verifica se o usuário está autenticado
         if 'user_id' not in session:
             return redirect(url_for('.login', next=request.url))
 
@@ -24,6 +24,13 @@ def authorize():
             return jsonify({'error': 'Invalid client'}), 400
 
         user = User.query.get(session['user_id'])
+
+        if client.criticality_level == 'medium':
+            # Enviar token via SMS
+            token = generate_token()
+            send_sms(user.username, token)  # Assumindo que o username é o número de telefone
+            store_token(user.id, token)
+        
         return render_template('authorize.html', user=user, request=request, criticality_level=client.criticality_level)
 
     if request.method == 'POST':
@@ -71,7 +78,30 @@ def logout():
 
 @bp.route('/')
 def index():
-    return 'Welcome to the OAuth2.0 Identity Provider'
+    return render_template('home.html')
+
+@bp.route('/bank-page')
+def bank_page():
+    return render_template('bank.html')
+
+@bp.route('/medical-page')
+def medical_page():
+    return render_template('medical.html')
+
+@bp.route('/elearning-page')
+def elearning_page():
+    return render_template('elearning.html')
+
+#@bp.route('/register', methods=['GET', 'POST'])
+#def register():
+#    if request.method == 'POST':
+#        username = request.form.get('username')
+#        password = request.form.get('password')
+#        user = User(username=username, password=generate_password_hash(password))
+#        db.session.add(user)
+#        db.session.commit()
+#        return redirect(url_for('.login'))
+#    return render_template('register.html')
 
 @bp.route('/introspect', methods=['POST'])
 def introspect_token():
@@ -84,13 +114,3 @@ def revoke_token():
     token = request.form.get('token')
     authorization.revoke_token(token)
     return jsonify({'status': 'success'})
-
-def validate_mobile_token(user, token):
-    # Função fictícia para validação do token do aplicativo móvel
-    # Implementar a lógica real de validação do token aqui
-    return token == 'valid_mobile_token'
-
-def validate_card_pin(user, pin):
-    # Função fictícia para validação do PIN com o cartão de cidadão
-    # Implementar a lógica real de validação do PIN aqui
-    return pin == 'valid_pin'
