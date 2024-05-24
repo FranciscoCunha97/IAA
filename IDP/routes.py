@@ -91,6 +91,19 @@ def medical_page():
 @bp.route('/elearning-page')
 def elearning_page():
     return render_template('elearning.html')
+    # return "<h2>Hello World</h2>"
+
+@bp.route('/bank-page/login')
+def bank_login():
+    return render_template('login.html')
+
+@bp.route('/medical-page/login')
+def medical_login():
+    return render_template('login.html')
+
+@bp.route('/elearning-page/login')
+def elearning_login():
+    return render_template('login.html')
 
 #@bp.route('/register', methods=['GET', 'POST'])
 #def register():
