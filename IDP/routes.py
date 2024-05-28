@@ -1,13 +1,12 @@
-from flask import Blueprint, request, jsonify, redirect, render_template, url_for, session, flash
-from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, OAuth2Client
-from oauth import authorization
-from utils import generate_token, send_sms, store_token, validate_mobile_token, validate_card_pin
-from smartcard.System import readers
-from smartcard.util import toHexString
+from flask import Blueprint, request, jsonify, redirect, render_template, url_for, flash, session
+from werkzeug.security import check_password_hash
+from models import add_user, get_user_by_email, create_tables, get_user_by_username, get_oauth2_client
+from oauth import generate_authorization_code, validate_authorization_code, generate_token, validate_token, introspect_token, revoke_token
+
 
 bp = Blueprint('main', __name__)
 
+'''
 def read_citizen_card_data():
     try:
         r = readers()
@@ -35,9 +34,12 @@ def read_citizen_card_data():
     except Exception as e:
         return None, str(e)
 
-@bp.route('/oauth/token', methods=['POST'])
-def issue_token():
-    return authorization.create_token_response()
+'''
+    
+@bp.before_app_request
+def initialize_database():
+    create_tables()
+
 
 @bp.route('/oauth/authorize', methods=['GET', 'POST'])
 def authorize():
@@ -46,54 +48,54 @@ def authorize():
             return redirect(url_for('.login', next=request.url))
 
         client_id = request.args.get('client_id')
-        client = OAuth2Client.query.filter_by(client_id=client_id).first()
+        redirect_uri = request.args.get('redirect_uri')
+        client = get_oauth2_client(client_id)
         if not client:
             return jsonify({'error': 'Invalid client'}), 400
 
-        user = User.query.get(session['user_id'])
-
-        if client.criticality_level == 'medium':
-            # Enviar token via SMS
-            token = generate_token()
-            send_sms(user.phone, token)
-            store_token(user.id, token)
-        
-        return render_template('authorize.html', user=user, request=request, criticality_level=client.criticality_level)
+        user_id = session['user_id']
+        code = generate_authorization_code(user_id, client_id, redirect_uri)
+        return jsonify({'code': code})
 
     if request.method == 'POST':
-        if 'user_id' not in session:
-            return jsonify({'error': 'User not logged in'}), 403
+        code = request.form.get('code')
+        authorization_code = validate_authorization_code(code)
+        if not authorization_code:
+            return jsonify({'error': 'Invalid or expired code'}), 400
 
-        client_id = request.form.get('client_id')
-        client = OAuth2Client.query.filter_by(client_id=client_id).first()
-        if not client:
-            return jsonify({'error': 'Invalid client'}), 400
+        access_token, refresh_token, expires_at = generate_token(authorization_code['user_id'], authorization_code['client_id'])
+        return jsonify({'access_token': access_token, 'refresh_token': refresh_token, 'expires_at': expires_at})
 
-        user = User.query.get(session['user_id'])
-        grant_user_consent = request.form.get('confirm', 'no')
-        if grant_user_consent == 'yes':
-            # Verificação adicional baseada no nível de criticidade
-            if client.criticality_level == 'medium':
-                token = request.form.get('token')
-                if not validate_mobile_token(user, token):
-                    return jsonify({'error': 'Invalid mobile token'}), 403
-            elif client.criticality_level == 'high':
-                pin = request.form.get('pin')
-                citizen_card = request.form.get('citizen_card')
-                if user.citizen_card != citizen_card or not validate_card_pin(user, pin):
-                    return jsonify({'error': 'Invalid PIN or Citizen Card'}), 403
 
-            return authorization.create_authorization_response(grant_user=user)
-        return authorization.create_authorization_response(grant_user=None)
+@bp.route('/oauth/token', methods=['POST'])
+def token():
+    access_token = request.form.get('access_token')
+    token = validate_token(access_token)
+    if not token:
+        return jsonify({'error': 'Invalid or expired token'}), 400
+    return jsonify({'user_id': token['user_id'], 'client_id': token['client_id'], 'expires_at': token['expires_at']})
+
+@bp.route('/introspect', methods=['POST'])
+def introspect_token_route():
+    access_token = request.form.get('token')
+    introspection = introspect_token(access_token)
+    return jsonify(introspection)
+
+@bp.route('/revoke', methods=['POST'])
+def revoke_token_route():
+    access_token = request.form.get('token')
+    revoke_token(access_token)
+    return jsonify({'status': 'success'})
+
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
-            session['user_id'] = user.id
+        user = get_user_by_email(email)
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
             next_url = request.args.get('next') or url_for('.index')
             return redirect(next_url)
         flash('Invalid credentials', 'danger')
@@ -136,41 +138,28 @@ def elearning_login():
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
 
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
+        if get_user_by_email(email):
             flash('Email already exists', 'danger')
             return redirect(url_for('.register'))
+        
+        if get_user_by_username(username):
+            flash('Username already exists', 'danger')
+            return redirect(url_for('.register'))
 
-        user = User(
-            email=email,
-            password=generate_password_hash(password)
-        )
-        db.session.add(user)
-        db.session.commit()
+        add_user(username, email, password)
         flash('Registration successful! Please log in.', 'success')
         return redirect(url_for('.login'))
     
     return render_template('register.html')
 
 
-
-@bp.route('/introspect', methods=['POST'])
-def introspect_token():
-    token = request.form.get('token')
-    introspection = authorization.introspect_token(token)
-    return jsonify(introspection)
-
-@bp.route('/revoke', methods=['POST'])
-def revoke_token():
-    token = request.form.get('token')
-    authorization.revoke_token(token)
-    return jsonify({'status': 'success'})
-
 # Rota para ler o Cartão de Cidadão e PIN
 
+'''
 @bp.route('/read-citizen-card', methods=['GET'])
 def read_citizen_card():
     result, error = read_citizen_card_data()
@@ -178,4 +167,6 @@ def read_citizen_card():
         print(error)
         return jsonify({'error': error}), 400
     return jsonify(result)
+
+'''
 
